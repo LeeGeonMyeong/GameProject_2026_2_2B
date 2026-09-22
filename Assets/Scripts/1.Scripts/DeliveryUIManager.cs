@@ -6,9 +6,13 @@ public class DeliveryUIManager : MonoBehaviour
 {
     [Header("UI 요소")]
     public Text statusText;
+
     public Text messageText;
+
     public Slider batterSlider;
+
     public Image batteryFill;
+
     public DeliveryDriver driver;
 
     void Start()

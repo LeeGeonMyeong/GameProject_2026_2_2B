@@ -100,6 +100,8 @@ public class DeliveryDriver : MonoBehaviour
         Vector3 moveDirection = new Vector3(input.x, 0f, input.y);
     }
 
+    
+
     void StartMoving()
     {
         isMoving = true;

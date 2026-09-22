@@ -11,7 +11,9 @@ public class Building : MonoBehaviour
     public class BuildingEvents
     {
         public UnityEvent<string> OnDriverEntered;
+
         public UnityEvent<string> OnDriverExited;
+
         public UnityEvent<BuildingType> OnServiceUsed;
     }
     public BuildingEvents buildingEvents;

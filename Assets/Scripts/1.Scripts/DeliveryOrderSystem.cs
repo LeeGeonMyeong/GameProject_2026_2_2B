@@ -6,81 +6,68 @@ using UnityEngine.Events;
 public class DeliveryOrderSystem : MonoBehaviour
 {
     [Header("주문 설정")]
-
-    public float orderenratelnterval = 15f;                 //주문 생성 시간
-
-    public int maxActiveOders = 8;                          //최대 주문 숫자
+    public float orderenratelnterval = 15f;                 // 주문 생성 시간
+    public int maxActiveOders = 8;                          // 최대 주문 숫자
 
     [Header("게임 상태")]
-
     public int totalOrdersGenerated = 0;
-
     public int completedOrders = 0;
-
     public int expiredOrders = 0;
 
-    //주문 리스트
-
+    // 주문 리스트
     private List<DeliveryOrder> currentOrders = new List<DeliveryOrder>();
 
-    //Building 참조
-
+    // Building 참조
     private List<Building> restaurants = new List<Building>();
-
     private List<Building> customers = new List<Building>();
 
-
-    //Event 시스템
+    // Event 시스템
     [System.Serializable]
-    
     public class OrderSystemEvents
     {
         public UnityEvent<DeliveryOrder> OnNewOrderAdded;
-
         public UnityEvent<DeliveryOrder> OnOrderPickedUp;
-
         public UnityEvent<DeliveryOrder> OnOrderCompleted;
-
         public UnityEvent<DeliveryOrder> OnOrderExpired;
     }
 
     public OrderSystemEvents orderEvents;
-
     public DeliveryDriver driver;
-
 
     private void Start()
     {
         driver = FindFirstObjectByType<DeliveryDriver>();
         FindAllBuilding();
 
-        //초기 주문 생성
+        // 초기 주문 생성
         StartCoroutine(GenerateInitialOrders());
-        //주기적 주문 생성
+        // 주기적 주문 생성
         StartCoroutine(OrderGenerator());
-        //만료 체크
+        // 만료 체크
         StartCoroutine(ExpiredOrderChecker());
     }
 
     private void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(10, 10, 400, 1300));
+        // 화면 좌측 상단에 주문 UI 출력
+        GUILayout.BeginArea(new Rect(10, 10, 300, Screen.height));
 
         GUILayout.Label("=== 배달 주문 ===");
         GUILayout.Label($"활성 주문 : {currentOrders.Count} 개");
-        GUILayout.Label($"픽업 대기 : {GetPickWaitingCount()}개");
-        GUILayout.Label($"배달 대기 : {GetDeliveryWaitingCount()}개");
-        GUILayout.Label($"완료 : {completedOrders} 개 | 만료 : {expiredOrders}");
+        GUILayout.Label($"픽업 대기 : {GetPickWaitingCount()} 개");
+        GUILayout.Label($"배달 대기 : {GetDeliveryWaitingCount()} 개");
+        GUILayout.Label($"완료 : {completedOrders} 개 | 만료 : {expiredOrders} 개");
 
         GUILayout.Space(10);
 
-        foreach(DeliveryOrder order in currentOrders)
+        foreach (DeliveryOrder order in currentOrders)
         {
-            string status = order.state == OrderState.WaitingPickup ? "팩업 대기" : "배달 대기";
+            string status = order.state == OrderState.WaitingPickup ? "픽업대기" : "배달대기";
             float timeLeft = order.GetRemainingTime();
 
             GUILayout.Label($"#{order.orderld} : {order.restaurantName} -> {order.customerName}");
             GUILayout.Label($"{status} | {timeLeft:F0} 초 남음");
+            GUILayout.Space(5);
         }
 
         GUILayout.EndArea();
@@ -90,8 +77,7 @@ public class DeliveryOrderSystem : MonoBehaviour
     {
         Building[] allBuildings = FindObjectsByType<Building>(FindObjectsSortMode.None);
 
-
-        foreach(Building building in allBuildings)
+        foreach (Building building in allBuildings)
         {
             if (building.BuildingType == BuildingType.Restaurant)
             {
@@ -103,60 +89,48 @@ public class DeliveryOrderSystem : MonoBehaviour
             }
         }
 
-        Debug.Log($"음식점 {restaurants.Count} 개 , 고객  {customers.Count} 명 발견");
+        Debug.Log($"음식점 {restaurants.Count} 개 , 고객 {customers.Count} 명 발견");
     }
 
     void CreateNewOrder()
     {
         if (restaurants.Count == 0 || customers.Count == 0) return;
 
-        //랜덤 음식점과 고객 선택
+        // 랜덤 음식점과 고객 선택
         Building randomRestaurant = restaurants[Random.Range(0, restaurants.Count)];
         Building randomCustomer = customers[Random.Range(0, customers.Count)];
 
-        //같은 건물이면 다시 선택
-        if (randomRestaurant == randomCustomer)
-        {
-            {
-                randomRestaurant = customers[Random.Range(0, customers.Count)];
-            }
-            float reward = Random.Range(3000f, 8000f);
+        float reward = Random.Range(3000f, 8000f);
 
-            DeliveryOrder newOrder = new DeliveryOrder(++totalOrdersGenerated, randomRestaurant, randomCustomer, reward);
-
-            currentOrders.Add(newOrder);
-            orderEvents.OnNewOrderAdded?.Invoke(newOrder);
-                
-        }
+        // 정상적으로 주문 생성
+        DeliveryOrder newOrder = new DeliveryOrder(++totalOrdersGenerated, randomRestaurant, randomCustomer, reward);
+        currentOrders.Add(newOrder);
+        orderEvents.OnNewOrderAdded?.Invoke(newOrder);
     }
 
-    void PickupOrder(DeliveryOrder order)               //픽업 함수
+    void PickupOrder(DeliveryOrder order)               // 픽업 함수
     {
         order.state = OrderState.PickedUp;
         orderEvents.OnOrderPickedUp?.Invoke(order);
     }
 
-
-    void CompleteOrder(DeliveryOrder order)             //배달 완료 함수
+    void CompleteOrder(DeliveryOrder order)             // 배달 완료 함수
     {
         order.state = OrderState.Completed;
         completedOrders++;
 
-        //보상 지급
-        if(driver != null)
+        // 보상 지급
+        if (driver != null)
         {
             driver.AddMoney(order.reward);
         }
 
-
-        //완료된 주문 제거
-        {
-            currentOrders.Remove(order);
-            orderEvents.OnOrderCompleted?.Invoke(order);
-        }
+        // 완료된 주문 제거
+        currentOrders.Remove(order);
+        orderEvents.OnOrderCompleted?.Invoke(order);
     }
 
-    void ExpireOrder(DeliveryOrder order)               //주문 취소 소멸
+    void ExpireOrder(DeliveryOrder order)               // 주문 취소 소멸
     {
         order.state = OrderState.Epired;
         expiredOrders++;
@@ -165,8 +139,7 @@ public class DeliveryOrderSystem : MonoBehaviour
         orderEvents.OnOrderExpired?.Invoke(order);
     }
 
-    //UI 정보 제공
-
+    // UI 정보 제공
     public List<DeliveryOrder> GetCurrentOrders()
     {
         return new List<DeliveryOrder>(currentOrders);
@@ -185,7 +158,7 @@ public class DeliveryOrderSystem : MonoBehaviour
     public int GetDeliveryWaitingCount()
     {
         int count = 0;
-        foreach(DeliveryOrder order in currentOrders)
+        foreach (DeliveryOrder order in currentOrders)
         {
             if (order.state == OrderState.PickedUp) count++;
         }
@@ -194,9 +167,9 @@ public class DeliveryOrderSystem : MonoBehaviour
 
     DeliveryOrder FindOrderForPickUp(Building restaurant)
     {
-        foreach(DeliveryOrder order in currentOrders)
+        foreach (DeliveryOrder order in currentOrders)
         {
-            if(order.restaurantBuilding == restaurant && order.state == OrderState.WaitingPickup)
+            if (order.restaurantBuilding == restaurant && order.state == OrderState.WaitingPickup)
             {
                 return order;
             }
@@ -209,7 +182,8 @@ public class DeliveryOrderSystem : MonoBehaviour
     {
         foreach (DeliveryOrder order in currentOrders)
         {
-            if (order.customerBuilding == customer && order.state == OrderState.WaitingPickup)
+            // 배달 대기는 상태가 PickedUp이어야 배달 가능
+            if (order.customerBuilding == customer && order.state == OrderState.PickedUp)
             {
                 return order;
             }
@@ -228,12 +202,11 @@ public class DeliveryOrderSystem : MonoBehaviour
         }
     }
 
-
     public void OnDriverEnteredCustorm(Building customer)
     {
         DeliveryOrder orderToDeliver = FindOrderForDelivery(customer);
 
-        if(orderToDeliver != null)
+        if (orderToDeliver != null)
         {
             CompleteOrder(orderToDeliver);
         }
@@ -268,19 +241,19 @@ public class DeliveryOrderSystem : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(5f);
-            List<DeliveryOrder> expiredOrders = new List<DeliveryOrder>();
+            List<DeliveryOrder> expired = new List<DeliveryOrder>();
 
             foreach (DeliveryOrder order in currentOrders)
             {
                 if (order.IsExpired() && order.state != OrderState.Completed)
                 {
-                    expiredOrders.Add(order);
+                    expired.Add(order);
                 }
             }
 
-            foreach (DeliveryOrder expired in expiredOrders)
+            foreach (DeliveryOrder expOrder in expired)
             {
-                ExpireOrder(expired);
+                ExpireOrder(expOrder);
             }
         }
     }
