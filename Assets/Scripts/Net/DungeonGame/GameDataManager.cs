@@ -63,6 +63,8 @@ public class GameDataManager : MonoBehaviour
             {
                 playerQuests = JsonConvert.DeserializeObject<List<Quest>>(www.downloadHandler.text);
 
+                Debug.Log($"퀘스트 조회 성공 : {playerQuests.Count}개");
+
                 foreach (var quest in playerQuests)
                 {
                     Debug.Log($" - {quest.title} {quest.status}");
@@ -77,9 +79,9 @@ public class GameDataManager : MonoBehaviour
         }
     }
 
-    public Quest GetQuest(int questld)
+    public Quest GetQuest(int questId)
     {
-        return playerQuests.Find(Quest => Quest.quest_id == questld);
+        return playerQuests.Find(quest => quest.quest_id == questId);
     }
 
     void Start()

@@ -1,21 +1,25 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const app = express();
+const envFile = require('node:path').join(__dirname, '.env');
+if (require('node:fs').existsSync(envFile)) {
+    process.loadEnvFile(envFile);
+}
 
 app.use(express.json());
 
 const pool = mysql.createPool({
 
-    host : 'localhost',
-    user : 'root',
-    password : '2023137025',
-    database : 'gametest'
+    host : process.env.DB_HOST || 'localhost',
+    user : process.env.DB_USER || 'root',
+    password : process.env.DB_PASSWORD || '',
+    database : process.env.DB_NAME || 'gametest'
 
 });
 
 //플레이어 로그인 
-app.post('/login' , async (requestAnimationFrame, res) => {
-    const {username, password_hash} = requestAnimationFrame.body;
+app.post('/login' , async (req, res) => {
+    const {username, password_hash} = req.body;
 
     try
     {
@@ -26,9 +30,14 @@ app.post('/login' , async (requestAnimationFrame, res) => {
         if(players.length > 0)
         {
             await pool.query(
-                'UPDATE players SET last_login = CURRENT_TIMESTAMP WHERE player_id = ?'
-
+                'UPDATE players SET last_login = CURRENT_TIMESTAMP WHERE player_id = ?',
+                [players[0].player_id]
             );
+            res.json({success: true, player: {
+                player_id: players[0].player_id,
+                username: players[0].username,
+                level: players[0].level
+            }});
         }
         else
         {
@@ -39,7 +48,7 @@ app.post('/login' , async (requestAnimationFrame, res) => {
     {
         res.status(500).json({success: false , message : error.message});
     }
-})
+});
 
 //플레이어 인벤토리 조회
 app.get('/inventory/:playerId' , async (req, res) => {
@@ -47,9 +56,10 @@ app.get('/inventory/:playerId' , async (req, res) => {
     try
     {
         const[inventory] = await pool.query (
-            'SELECT inv.item_id, inv.quantity FROM inventories inv JOIN items i ON inv.item_id = i.item_id WHERE inv.player_id = ?'
+            'SELECT inv.item_id, inv.quantity FROM inventories inv JOIN items i ON inv.item_id = i.item_id WHERE inv.player_id = ?',
             [req.params.playerId]
         );
+        res.json(inventory);
     }
     catch(error)
     {
@@ -79,5 +89,5 @@ app.get('/quests/:playerId', async (req, res) => {
 const PORT = 3000;
 
 app.listen(PORT, ()=> {
-    console.log('서버 실행 중 : ${PORT}')
-})
+    console.log(`서버 실행 중 : ${PORT}`);
+});
