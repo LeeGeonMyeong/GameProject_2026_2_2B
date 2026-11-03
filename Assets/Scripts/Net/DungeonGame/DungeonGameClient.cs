@@ -57,6 +57,13 @@ public class DungeonGameClient : MonoBehaviour
 
     private void ReadResponse(UnityWebRequest request)
     {
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            messageText.text = "서버 요청 실패 : " + request.error;
+            Debug.LogError($"서버 요청 실패: {request.url} (HTTP {request.responseCode}) - {request.error}");
+            return;
+        }
+
         string Json = request.downloadHandler.text;
 
         DungeonResponse response = JsonUtility.FromJson<DungeonResponse>(Json);
@@ -64,7 +71,7 @@ public class DungeonGameClient : MonoBehaviour
         if(response == null)
         {
             messageText.text = "서버 응답을 읽을 수 없습니다.";
-            Debug.LogError(Json);
+            Debug.LogError($"서버 응답을 읽을 수 없습니다: {request.url}\n응답: {Json}");
             return;
         }
 
